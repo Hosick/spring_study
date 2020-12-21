@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!--Bean을 직접 설정 : 원시적인 방법이며 매우 번거로움
+    <bean id="bookService" class="com.hosick.springapplicationcontext.BookService">
+        &lt;!&ndash;scope="singleton" autowire="default"&ndash;&gt;
+        <property name="bookRepository" ref="bookRepository"/>  &lt;!&ndash;name은 setter / ref 은 다른 빈&ndash;&gt;
+    </bean>
+    <bean id="bookRepository" class="com.hosick.springapplicationcontext.BookRepository"/>-->
+
+    <!-- Component 어노테이션으로 설정된 Bean 들을 스캔 -->
+    <!--<context:component-scan base-package="com.hosick.springapplicationcontext"/>-->
+
+</beans>
