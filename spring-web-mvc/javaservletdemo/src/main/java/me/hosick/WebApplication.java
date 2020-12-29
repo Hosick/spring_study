@@ -8,7 +8,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
 
-public class WebApplication implements WebApplicationInitializer {
+public class WebApplication implements WebApplicationInitializer {  //  WebApplicationInitializer로 web.xml 없이 DispatcherServlet 등록
 
     @Override
     public void onStartup(ServletContext servletContext) throws ServletException {
