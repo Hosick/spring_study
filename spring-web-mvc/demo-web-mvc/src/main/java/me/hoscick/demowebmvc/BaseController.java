@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 
 import java.util.List;
 
-@ControllerAdvice(assignableTypes = {EventController.class, EventApi.class})
+@ControllerAdvice(assignableTypes = {EventController.class, EventApi.class })
 public class BaseController {
     @ExceptionHandler({EventException.class, RuntimeException.class})
     public String eventErrorHandler(RuntimeException ex, Model model) {
