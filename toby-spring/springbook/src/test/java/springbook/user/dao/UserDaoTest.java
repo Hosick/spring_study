@@ -39,9 +39,9 @@ public class UserDaoTest {
 
   @Before
   public void setUp() {
-    this.user1 = new User("gyumee", "박성철", "springno1", Level.BASIC, 1, 0);
-    this.user2 = new User("leegw700", "이길원", "springno2", Level.SILVER, 55, 10);
-    this.user3 = new User("bumjin", "박범진", "springno3", Level.GOLD, 100, 40);
+    this.user1 = new User("gyumee", "박성철", "springno1", Level.BASIC, 1, 0, "user1@gmail.com");
+    this.user2 = new User("leegw700", "이길원", "springno2", Level.SILVER, 55, 10,"user2@gmail.com");
+    this.user3 = new User("bumjin", "박범진", "springno3", Level.GOLD, 100, 40,"user3@gmail.com");
   }
 
   @Test
@@ -72,6 +72,7 @@ public class UserDaoTest {
     user1.setLevel(Level.GOLD);
     user1.setLogin(100);
     user1.setRecommend(999);
+    user1.setEmail("update@gmail.com");
 
     dao.update(user1);
 
@@ -138,6 +139,7 @@ public class UserDaoTest {
     assertThat(user1.getLevel(), is(user2.getLevel()));
     assertThat(user1.getLogin(), is(user2.getLogin()));
     assertThat(user1.getRecommend(), is(user2.getRecommend()));
+    assertThat(user1.getEmail(), is(user2.getEmail()));
   }
 
   @Test(expected = DuplicateKeyException.class)
