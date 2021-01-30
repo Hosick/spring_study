@@ -1,10 +1,9 @@
 package springbook.user.service;
 
-import org.springframework.transaction.annotation.Transactional;
 import springbook.user.domain.User;
 import springbook.user.exception.TestUserServiceException;
 
-public class TestUserService extends UserService {
+public class TestUserService extends UserServiceImpl {
 
   private String id;
 

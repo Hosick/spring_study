@@ -1,14 +1,13 @@
 package springbook.user.service;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.*;
-import static springbook.user.service.UserService.MIN_LOGCOUNT_FOR_SILVER;
-import static springbook.user.service.UserService.MIN_RECCOMEND_FOR_GOLD;
+import static springbook.user.service.UserServiceImpl.MIN_LOGCOUNT_FOR_SILVER;
+import static springbook.user.service.UserServiceImpl.MIN_RECCOMEND_FOR_GOLD;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import javax.sql.DataSource;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,37 +30,46 @@ public class UserServiceTest {
   @Autowired
   UserService userService;
 
+  @Autowired
+  UserDao userDao;
+
   List<User> users;
 
   @Before
   public void setUp() {
     users = Arrays.asList(
-        new User("bumjin", "박범진", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER - 1, 0, "u1@email.com"),
-        new User("joytouch", "강명성", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0,"u2@email.com"),
-        new User("erwins", "신승한", "p3", Level.SILVER, 60, MIN_RECCOMEND_FOR_GOLD - 1,"u3@email.com"),
-        new User("madnite1", "이상호", "p4", Level.SILVER, 60, MIN_RECCOMEND_FOR_GOLD,"u4@email.com"),
-        new User("green", "오민규", "p5", Level.GOLD, 100, Integer.MAX_VALUE,"u5@email.com")
+        new User("bumjin", "박범진", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER - 1, 0,
+            "u1@email.com"),
+        new User("joytouch", "강명성", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0, "u2@email.com"),
+        new User("erwins", "신승한", "p3", Level.SILVER, 60, MIN_RECCOMEND_FOR_GOLD - 1,
+            "u3@email.com"),
+        new User("madnite1", "이상호", "p4", Level.SILVER, 60, MIN_RECCOMEND_FOR_GOLD, "u4@email.com"),
+        new User("green", "오민규", "p5", Level.GOLD, 100, Integer.MAX_VALUE, "u5@email.com")
     );
   }
 
   @Test
   public void upgradeLevels() throws Exception {
-    userService.userDao.deleteAll();
-    for (User user : users) {
-      userService.userDao.add(user);
-    }
+    UserServiceImpl userServiceImpl = new UserServiceImpl();
 
-    userService.upgradeLevels();
+    MockUserDao mockUserDao = new MockUserDao(this.users);
+    userServiceImpl.setUserDao(mockUserDao);
 
-    checkLevelUpgraded(users.get(0), false);
-    checkLevelUpgraded(users.get(1), true);
-    checkLevelUpgraded(users.get(2), false);
-    checkLevelUpgraded(users.get(3), true);
-    checkLevelUpgraded(users.get(4), false);
+    userServiceImpl.upgradeLevels();
+
+    List<User> updated = mockUserDao.getUpdated();
+    assertThat(updated.size(), is(2));
+    checkUserAndLevel(updated.get(0), "joytouch", Level.SILVER);
+    checkUserAndLevel(updated.get(1), "madnite1", Level.GOLD);
+  }
+
+  private void checkUserAndLevel(User updated, String expectedId, Level expectedLevel){
+    assertThat(updated.getId(), is(expectedId));
+    assertThat(updated.getLevel(), is(expectedLevel));
   }
 
   private void checkLevelUpgraded(User user, boolean upgraded) {
-    User userUpdate = userService.userDao.get(user.getId());
+    User userUpdate = userDao.get(user.getId());
     if (upgraded) {
       assertThat(userUpdate.getLevel(), is(user.getLevel().nextLevel()));
     } else {
@@ -71,7 +79,7 @@ public class UserServiceTest {
 
   @Test
   public void add() {
-    userService.userDao.deleteAll();
+    userDao.deleteAll();
 
     User userWithLevel = users.get(4);
     User userWithoutLevel = users.get(0);
@@ -80,8 +88,8 @@ public class UserServiceTest {
     userService.add(userWithLevel);
     userService.add(userWithoutLevel);
 
-    User userWithLevelRead = userService.userDao.get(userWithLevel.getId());
-    User userWithoutLevelRead = userService.userDao.get(userWithoutLevel.getId());
+    User userWithLevelRead = userDao.get(userWithLevel.getId());
+    User userWithoutLevelRead = userDao.get(userWithoutLevel.getId());
 
     assertThat(userWithLevelRead.getLevel(), is(userWithLevel.getLevel()));
     assertThat(userWithoutLevelRead.getLevel(), is(Level.BASIC));
@@ -89,21 +97,58 @@ public class UserServiceTest {
 
   @Test
   public void upgradeAllOrNothing() throws Exception {
-    UserService testUserService = new TestUserService(users.get(3).getId());
-    testUserService.setUserDao(this.userService.userDao);
-    testUserService.setTransactionManager(transactionManager);
+    TestUserService testUserService = new TestUserService(users.get(3).getId());
+    testUserService.setUserDao(this.userDao);
 
-    userService.userDao.deleteAll();
+    UserServiceTx txUserService = new UserServiceTx();
+    txUserService.setTransactionManager(transactionManager);
+    txUserService.setUserService(testUserService);
+
+    userDao.deleteAll();
     for (User user : users) {
-      userService.userDao.add(user);
+      userDao.add(user);
     }
 
     try {
-      testUserService.upgradeLevels();
+      txUserService.upgradeLevels();
       fail("TestUserServiceException expected");
     } catch (TestUserServiceException e) {
     }
 
     checkLevelUpgraded(users.get(1), false);
+  }
+
+  static class MockUserDao implements UserDao {
+
+    private List<User> users;
+    private List<User> updated = new ArrayList<>();
+
+    private MockUserDao(List<User> users) {
+      this.users = users;
+    }
+
+    public List<User> getUpdated() {
+      return this.updated;
+    }
+
+    public List<User> getAll(){
+      return this.users;
+    }
+
+    public void update(User user){
+      updated.add(user);
+    }
+
+    @Override
+    public void add(User user) { throw new UnsupportedOperationException(); }
+
+    @Override
+    public User get(String id) { throw new UnsupportedOperationException(); }
+
+    @Override
+    public void deleteAll() { throw new UnsupportedOperationException(); }
+
+    @Override
+    public int getCount() { throw new UnsupportedOperationException(); }
   }
 }
