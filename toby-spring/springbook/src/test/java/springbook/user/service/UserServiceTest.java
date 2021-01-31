@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import static springbook.user.service.UserServiceImpl.MIN_LOGCOUNT_FOR_SILVER;
 import static springbook.user.service.UserServiceImpl.MIN_RECCOMEND_FOR_GOLD;
 
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -12,6 +13,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -23,6 +26,9 @@ import springbook.user.exception.TestUserServiceException;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/test-applicationContext.xml")
 public class UserServiceTest {
+
+  @Autowired
+  ApplicationContext context;
 
   @Autowired
   PlatformTransactionManager transactionManager;
@@ -96,13 +102,14 @@ public class UserServiceTest {
   }
 
   @Test
+  @DirtiesContext
   public void upgradeAllOrNothing() throws Exception {
     TestUserService testUserService = new TestUserService(users.get(3).getId());
-    testUserService.setUserDao(this.userDao);
+    testUserService.setUserDao(userDao);
 
-    UserServiceTx txUserService = new UserServiceTx();
-    txUserService.setTransactionManager(transactionManager);
-    txUserService.setUserService(testUserService);
+    TxProxyFactoryBean txProxyFactoryBean = context.getBean("&userService", TxProxyFactoryBean.class);
+    txProxyFactoryBean.setTarget(testUserService);
+    UserService txUserService = (UserService) txProxyFactoryBean.getObject();
 
     userDao.deleteAll();
     for (User user : users) {
