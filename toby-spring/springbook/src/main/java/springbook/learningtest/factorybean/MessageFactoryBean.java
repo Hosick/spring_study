@@ -1,4 +1,4 @@
-package springbook.factorybean;
+package springbook.learningtest.factorybean;
 
 import org.springframework.beans.factory.FactoryBean;
 
