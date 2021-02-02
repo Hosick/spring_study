@@ -38,6 +38,9 @@ public class UserServiceTest {
   UserService userService;
 
   @Autowired
+  UserService testUserService;
+
+  @Autowired
   UserDao userDao;
 
   List<User> users;
@@ -105,26 +108,24 @@ public class UserServiceTest {
   @Test
   @DirtiesContext
   public void upgradeAllOrNothing() throws Exception {
-    TestUserService testUserService = new TestUserService(users.get(3).getId());
-    testUserService.setUserDao(userDao);
-
-    ProxyFactoryBean txProxyFactoryBean = context.getBean("&userService", ProxyFactoryBean.class);
-    txProxyFactoryBean.setTarget(testUserService);
-    UserService txUserService = (UserService) txProxyFactoryBean.getObject();
-
     userDao.deleteAll();
     for (User user : users) {
       userDao.add(user);
     }
 
     try {
-      txUserService.upgradeLevels();
+      testUserService.upgradeLevels();
       fail("TestUserServiceException expected");
     } catch (TestUserServiceException e) {
     }
 
     checkLevelUpgraded(users.get(1), false);
   }
+
+  /*@Test
+  public void advisorAutoProxyCreator(){
+    assertEquals(testUserService.getClass(), java.lang.reflect.Proxy.class);
+  }*/
 
   static class MockUserDao implements UserDao {
 
@@ -158,5 +159,19 @@ public class UserServiceTest {
 
     @Override
     public int getCount() { throw new UnsupportedOperationException(); }
+  }
+
+  static class TestUserService extends UserServiceImpl {
+
+    private String id = "madnite1";
+
+    protected void upgradeLevel(User user) {
+      if (user.getId().equals(this.id))
+        throw new TestUserServiceException();
+      super.upgradeLevel(user);
+    }
+  }
+
+  static class TestUserServiceException extends RuntimeException {
   }
 }
