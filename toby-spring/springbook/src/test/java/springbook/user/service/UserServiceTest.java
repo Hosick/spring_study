@@ -15,10 +15,14 @@ import org.junit.runner.RunWith;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import springbook.user.dao.UserDao;
 import springbook.user.domain.Level;
 import springbook.user.domain.User;
@@ -73,7 +77,7 @@ public class UserServiceTest {
     checkUserAndLevel(updated.get(1), "madnite1", Level.GOLD);
   }
 
-  private void checkUserAndLevel(User updated, String expectedId, Level expectedLevel){
+  private void checkUserAndLevel(User updated, String expectedId, Level expectedLevel) {
     assertThat(updated.getId(), is(expectedId));
     assertThat(updated.getLevel(), is(expectedLevel));
   }
@@ -122,6 +126,19 @@ public class UserServiceTest {
     checkLevelUpgraded(users.get(1), false);
   }
 
+  @Test(expected = TransientDataAccessResourceException.class)
+  public void readOnlyTransactionAttribute() {
+    testUserService.getAll();
+  }
+
+  @Test
+  @Transactional
+  public void transactionSync(){
+      userService.deleteAll();
+      userService.add(users.get(0));
+      userService.add(users.get(1));
+  }
+
   /*@Test
   public void advisorAutoProxyCreator(){
     assertEquals(testUserService.getClass(), java.lang.reflect.Proxy.class);
@@ -140,25 +157,33 @@ public class UserServiceTest {
       return this.updated;
     }
 
-    public List<User> getAll(){
+    public List<User> getAll() {
       return this.users;
     }
 
-    public void update(User user){
+    public void update(User user) {
       updated.add(user);
     }
 
     @Override
-    public void add(User user) { throw new UnsupportedOperationException(); }
+    public void add(User user) {
+      throw new UnsupportedOperationException();
+    }
 
     @Override
-    public User get(String id) { throw new UnsupportedOperationException(); }
+    public User get(String id) {
+      throw new UnsupportedOperationException();
+    }
 
     @Override
-    public void deleteAll() { throw new UnsupportedOperationException(); }
+    public void deleteAll() {
+      throw new UnsupportedOperationException();
+    }
 
     @Override
-    public int getCount() { throw new UnsupportedOperationException(); }
+    public int getCount() {
+      throw new UnsupportedOperationException();
+    }
   }
 
   static class TestUserService extends UserServiceImpl {
@@ -166,12 +191,21 @@ public class UserServiceTest {
     private String id = "madnite1";
 
     protected void upgradeLevel(User user) {
-      if (user.getId().equals(this.id))
+      if (user.getId().equals(this.id)) {
         throw new TestUserServiceException();
+      }
       super.upgradeLevel(user);
+    }
+
+    public List<User> getAll() {
+      for (User user : super.getAll()){
+        super.update(user);
+      }
+      return null;
     }
   }
 
   static class TestUserServiceException extends RuntimeException {
+
   }
 }
